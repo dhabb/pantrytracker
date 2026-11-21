@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pantry</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#eaf1ee;--ink:#10302a;--mut:#5a7670;--card:#fff;--line:#d2e0db;--acc:#0f766e;--onacc:#fff;--warn:#b45309;--warnbg:#fdf0d8;--bad:#b91c1c;--badbg:#fde4e2;--ok:#0f766e;--okbg:#d9efe9;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1917;--ink:#e3f0ec;--mut:#8aa8a1;--card:#152724--line:#233d38;--acc:#4fd1be;--onacc:#06231f;--warn:#f0b35a;--warnbg:#3a2c12;--bad:#ff8f86;--badbg:#3b1b19;--ok:#4fd1be;--okbg:#12342f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1917;--ink:#e3f0ec;--mut:#8aa8a1;--card:#152724;--line:#233d38;--acc:#4fd1be;--onacc:#06231f;--warn:#f0b35a;--warnbg:#3a2c12;--bad:#ff8f86;--badbg:#3b1b19;--ok:#4fd1be;--okbg:#12342f;color-scheme:dark}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:84px;max-width:560px;margin-inline:auto}
+[hidden]{display:none!important}
+header{padding:20px 18px 6px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0}
+.sub{color:var(--mut);font-size:14px;margin-top:2px}
+main{padding:8px 14px}
+h2{font-size:15px;font-weight:600;color:var(--mut);margin:18px 4px 8px}
+.row{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.chip{flex:none;width:50px;height:50px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:19px;line-height:1}
+.chip small{display:block;font-size:10px;font-weight:600;margin-top:2px;text-align:center}
+.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.bad{background:var(--badbg);color:var(--bad)}.none{background:var(--line);color:var(--mut)}
+.grow{flex:1;min-width:0}
+.name{font-weight:600;overflow-wrap:anywhere}
+.meta{font-size:13px;color:var(--mut)}
+.acts{display:flex;flex-direction:column;gap:4px}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:transparent;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:600}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.pri{background:var(--acc);color:var(--onacc);border-color:var(--acc)}
+.big{width:100%;padding:13px;font-size:16px;border-radius:12px;margin:4px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.card h3{margin:0 0 6px;font-size:17px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.tag{font-size:13px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+.tag.have{background:var(--okbg);color:var(--ok);border-color:transparent}
+.tag.use{background:var(--warnbg);color:var(--warn);border-color:transparent;font-weight:600}
+.empty{color:var(--mut);padding:18px 8px;text-align:center}
+input,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:10px}
+label{font-size:13px;font-weight:600;color:var(--mut);display:block;margin-bottom:4px}
+.two{display:flex;gap:10px}.two>div{flex:1}
+.bc{display:flex;gap:8px}.bc input{margin-bottom:10px}.bc button{height:44px;flex:none}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;max-width:560px;margin:auto;background:var(--card);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;border:0;padding:10px 4px;font-size:14px;color:var(--mut);border-radius:10px;position:relative}
+nav button.on{color:var(--acc);background:var(--okbg)}
+nav i{font-style:normal;font-size:11px;background:var(--bad);color:#fff;border-radius:9px;padding:1px 6px;margin-left:4px}
+#sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+#sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+#sheet h3{margin:0 0 12px;font-size:20px}
+#scan{position:fixed;inset:0;background:#000;z-index:30;display:flex;flex-direction:column}
+#scan video{flex:1;width:100%;object-fit:cover;min-height:0}
+#scan p{color:#fff;text-align:center;margin:10px}
+#scan button{margin:0 auto 24px;background:#fff;color:#000}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;z-index:40;max-width:90%}
+.chk{display:flex;gap:12px;align-items:center}
+.chk input{width:22px;height:22px;margin:0;flex:none}
+.done .name{text-decoration:line-through;color:var(--mut)}
+.step{display:flex;align-items:center;gap:6px}.step button{width:34px;height:34px;padding:0;font-size:18px}.step b{min-width:24px;text-align:center}
+.gear{position:absolute;right:14px;top:22px}
+select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:10px;font:inherit;color:inherit}
+header{position:relative}
+</style>
+</head>
+<body>
+<header><h1 id="ttl"></h1><div class="sub" id="sub"></div><button class="gear" style="right:96px" data-a="convert">Convert</button><button class="gear" data-a="settings">Settings</button></header>
+<main id="main"></main>
+<nav id="nav"></nav>
+<div id="sheetbg" hidden><div id="sheet"></div></div>
+<div id="scan" hidden><video id="vid" playsinline muted></video><p>Point the camera at a barcode</p><button id="scanx">Cancel</button></div>
+<div id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s);
+let S={items:[],recipes:[],shop:[],codes:{},win:7,dens:{}},tab='soon',fromShop=null,editId=null;
+try{const r=localStorage.getItem('pantry-v1');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+function migrate(){S.items.forEach(i=>{if(typeof i.qty!=='number'){const t=String(i.qty||'').trim(),m=t.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);i.qty=m?+m[1]:1;i.unit=m?m[2]:t}i.unit=i.unit||''});if(!(S.win>=0))S.win=7;if(!S.dens||typeof S.dens!=='object')S.dens={}}
+migrate();
+const save=()=>{try{localStorage.setItem('pantry-v1',JSON.stringify(S))}catch(e){}};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s).trim().toLowerCase();
+const days=d=>d?Math.round((new Date(d+'T00:00:00')-new Date(new Date().toDateString()))/864e5):null;
+const match=(a,b)=>{a=norm(a);b=norm(b);return a&&b&&(a.includes(b)||b.includes(a))};
+const have=g=>S.items.some(i=>match(i.name,g));
+const inShop=n=>S.shop.some(s=>norm(s.name)===norm(n));
+const soonItems=()=>S.items.filter(i=>{const d=days(i.exp);return d!==null&&d<=S.win}).sort((a,b)=>days(a.exp)-days(b.exp));
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
+function suggest(){const soon=soonItems();
+ return S.recipes.map(r=>({r,use:r.ing.filter(g=>soon.some(i=>match(i.name,g))),miss:r.ing.filter(g=>!have(g))}))
+ .filter(x=>x.use.length).sort((a,b)=>b.use.length-a.use.length||a.miss.length-b.miss.length)}
+function when(d){const n=days(d);if(n<0)return n===-1?'Expired yesterday':'Expired '+(-n)+' days ago';if(n===0)return'Expires today';if(n===1)return'Expires tomorrow';return'Expires in '+n+' days'}
+function chip(i){const d=days(i.exp);if(d===null)return'<div class="chip none">–<small>no date</small></div>';
+ const c=d<=2?'bad':d<=5?'warn':'ok';return `<div class="chip ${c}">${d<0?'!':d}<small>${d<0?'expired':d===1?'day':'days'}</small></div>`}
+function itemRow(i){return `<div class="row">${chip(i)}<div class="grow"><button class="name" data-a="edit" data-id="${i.id}" style="border:0;padding:0;text-align:left;font-size:16px;background:none">${esc(i.name)}</button><div class="meta">${i.exp?when(i.exp):'No expiry date'}${sizeTxt(i)}</div></div>
+<div class="step"><button data-a="dec" data-id="${i.id}" aria-label="One less">−</button><b>${i.qty}</b><button data-a="inc" data-id="${i.id}" aria-label="One more">+</button></div></div>`}
+function recipeTags(r){const soon=soonItems();return r.ing.map(g=>{const u=soon.some(i=>match(i.name,g));return `<span class="tag ${u?'use':have(g)?'have':''}">${esc(g)}</span>`}).join('')}
+function render(){
+ const soon=soonItems(),miss=S.shop.filter(s=>!s.done).length;
+ const titles={soon:['Use first','Expiring within '+S.win+' days'],pantry:['Pantry',S.items.length+' items'],recipes:['Recipes',S.recipes.length+' saved'],list:['Shopping list',miss+' to buy']};
+ $('#ttl').textContent=titles[tab][0];$('#sub').textContent=titles[tab][1];
+ let h='';
+ if(tab==='soon'){
+  h+=`<button class="pri big" data-a="additem">Add item</button>`;
+  h+=soon.length?soon.map(itemRow).join(''):`<div class="empty">Nothing is close to expiring. Items dated within the next ${S.win} days show up here.</div>`;
+  const sg=suggest();h+='<h2>Cook with them</h2>';
+  h+=sg.length?sg.map(x=>`<div class="card"><h3>${esc(x.r.name)}</h3><div class="meta">Uses ${x.use.length} expiring · missing ${x.miss.length}</div><div class="tags">${recipeTags(x.r)}</div>${x.miss.length?`<button data-a="addmiss" data-id="${x.r.id}">Add missing to list</button>`:''}</div>`).join(''):`<div class="empty">${S.recipes.length?'No saved recipe uses your expiring items.':'Save a few recipes and matches will show up here.'}</div>`;
+ }
+ if(tab==='pantry'){
+  h+=`<button class="pri big" data-a="additem">Add item</button>`;
+  const all=[...S.items].sort((a,b)=>(a.exp?days(a.exp):1e9)-(b.exp?days(b.exp):1e9));
+  h+=all.length?all.map(itemRow).join(''):`<div class="empty">Your pantry is empty. Scan a barcode or type an item to start.</div>`;
+ }
+ if(tab==='recipes'){
+  h+=`<button class="pri big" data-a="addrec">Add recipe</button>`;
+  h+=S.recipes.length?S.recipes.map(r=>{const m=r.ing.filter(g=>!have(g)).length;return `<div class="card"><h3>${esc(r.name)}</h3><div class="tags">${recipeTags(r)}</div>${r.notes?`<div class="meta" style="margin-bottom:10px;white-space:pre-wrap">${esc(r.notes)}</div>`:''}<div style="display:flex;gap:8px">${m?`<button data-a="addmiss" data-id="${r.id}">Add ${m} missing to list</button>`:'<span class="meta">You have everything</span>'}<button data-a="delrec" data-id="${r.id}">Delete</button></div></div>`}).join(''):`<div class="empty">No recipes yet. Add one with its ingredients and it will be matched against your pantry.</div>`;
+ }
+ if(tab==='list'){
+  h+=`<div class="bc"><input id="shopin" placeholder="Add an item" aria-label="Add an item"><button class="pri" data-a="addshop" style="height:44px">Add</button></div>`;
+  h+=S.shop.length?S.shop.map(s=>`<div class="row ${s.done?'done':''}"><label class="chk grow" style="margin:0;color:inherit;font-size:16px"><input type="checkbox" data-a="tog" data-id="${s.id}" ${s.done?'checked':''}><span class="name">${esc(s.name)}</span></label><button data-a="stock" data-id="${s.id}">Stock</button></div>`).join('')+(S.shop.some(s=>s.done)?`<button class="big" data-a="clear">Clear checked</button>`:''):`<div class="empty">List is empty. Mark items “Need more” or add a recipe’s missing ingredients.</div>`;
+ }
+ $('#main').innerHTML=h;
+ const N=[['soon','Use first',soon.filter(i=>days(i.exp)<=2).length],['pantry','Pantry',0],['recipes','Recipes',0],['list','List',miss]];
+ $('#nav').innerHTML=N.map(([k,l,n])=>`<button class="${tab===k?'on':''}" data-a="tab" data-id="${k}">${l}${n?`<i>${n}</i>`:''}</button>`).join('');
+}
+function sheet(h){$('#sheet').innerHTML=h;$('#sheetbg').hidden=false}
+function closeSheet(){$('#sheetbg').hidden=true;fromShop=null}
+function itemSheet(name,it){it=it||{};editId=it.id||null;sheet(`<h3>${it.id?'Edit item':'Add item'}</h3><label for="f-bc">Barcode</label><div class="bc"><input id="f-bc" inputmode="numeric" value="${esc(it.bc||'')}" placeholder="Scan or type"><button data-a="scan">Scan</button></div><button data-a="lookup" style="margin-bottom:10px">Look up name on UPCitemdb</button>
+<label for="f-name">Name</label><input id="f-name" value="${esc(it.name||name||'')}" placeholder="e.g. Greek yogurt">
+<div class="two"><div><label for="f-qty">Containers</label><input id="f-qty" type="number" inputmode="decimal" min="0" step="any" value="${it.qty??1}"></div><div><label for="f-unit">Container name</label><input id="f-unit" value="${esc(it.unit||'')}" placeholder="e.g. can, bag"></div></div><div class="two"><div><label for="f-size">Amount per container</label><input id="f-size" type="number" inputmode="decimal" min="0" step="any" value="${it.size||''}" placeholder="e.g. 400"></div><div><label for="f-su">Measured in</label><select id="f-su">${uopts(it.su||'g')}</select></div></div><label for="f-exp">Expiration date</label><input id="f-exp" type="date" value="${esc(it.exp||'')}">
+${it.id&&it.size?'<label for="u-amt">Use some</label><div class="bc"><input id="u-amt" type="number" inputmode="decimal" min="0" step="any" placeholder="Amount used"><select id="u-un" style="width:90px;margin-bottom:10px">'+uopts(it.su||'g')+'</select><button data-a="usesome" data-id="'+it.id+'" style="height:44px">Use</button></div>':''}<button class="pri big" data-a="saveitem">Save item</button>${it.id?'<button class="big" data-a="need" data-id="'+it.id+'">Out of this: move to list</button><button class="big" data-a="delitem" data-id="'+it.id+'">Delete item</button>':''}<button class="big" data-a="close">Cancel</button>`);
+ $('#f-bc').oninput=e=>{const c=e.target.value.trim();if(S.codes[c]&&!$('#f-name').value)$('#f-name').value=S.codes[c]}}
+const U={g:['m',1],kg:['m',1000],oz:['m',28.3495],lb:['m',453.592],ml:['v',1],l:['v',1000],tsp:['v',4.92892],tbsp:['v',14.7868],floz:['v',29.5735],cup:['v',236.588]};
+const ul=u=>u==='floz'?'fl oz':u;
+const uopts=sel=>Object.keys(U).map(k=>`<option value="${k}"${k===sel?' selected':''}>${ul(k)}</option>`).join('');
+const TYP={water:1,milk:1.03,flour:.53,sugar:.85,butter:.96,oil:.92,honey:1.42};
+const fmt=x=>{x=+x;return String(Math.abs(x)>=100?Math.round(x):Math.round(x*100)/100)};
+const sizeTxt=i=>i.size?' · '+fmt(i.size)+' '+ul(i.su||'g')+(i.unit?' per '+esc(i.unit):' each')+(i.qty!==1?' ('+fmt(i.qty*i.size)+' '+ul(i.su||'g')+' total)':''):(i.unit?' · '+esc(i.unit):'');
+function densFor(n){const all=Object.assign({},TYP,S.dens);let best=null;for(const k in all){if(match(n,k)&&(!best||k.length>best.length))best=k}return best?{k:best,d:all[best],own:best in S.dens}:null}
+function conv(v,f,t,n){const a=U[f],b=U[t];if(a[0]===b[0])return v*a[1]/b[1];const d=densFor(n);if(!d)return null;const g=a[0]==='m'?v*a[1]:v*a[1]*d.d;return b[0]==='m'?g/b[1]:g/d.d/b[1]}
+function convSheet(){const names=[...new Set([...S.items.map(i=>i.name),...Object.keys(TYP),...Object.keys(S.dens)])];
+ sheet(`<h3>Convert</h3><div class="two"><div><label for="c-v">Amount</label><input id="c-v" type="number" inputmode="decimal" step="any" value="1"></div><div><label for="c-f">From</label><select id="c-f">${uopts('cup')}</select></div><div><label for="c-t">To</label><select id="c-t">${uopts('g')}</select></div></div>
+<label for="c-n">Ingredient (needed for weight ↔ volume)</label><input id="c-n" list="c-l" placeholder="e.g. flour"><datalist id="c-l">${names.map(n=>'<option value="'+esc(n)+'">').join('')}</datalist>
+<div class="card" id="c-r" style="font-size:18px;font-weight:600"></div>
+<h3 style="margin-top:14px">Densities</h3><div id="d-list"></div>
+<label for="d-n">Ingredient</label><input id="d-n" placeholder="e.g. rolled oats"><div class="bc"><input id="d-v" type="number" inputmode="decimal" step="any" placeholder="Value"><select id="d-u" style="width:110px;margin-bottom:10px"><option value="gml">g per ml</option><option value="gcup">g per cup</option></select><button class="pri" data-a="savedens" style="height:44px">Save</button></div><button class="big" data-a="close">Done</button>`);
+ ['c-v','c-f','c-t','c-n'].forEach(id=>$('#'+id).oninput=convUpdate);convUpdate();densList()}
+function convUpdate(){const v=parseFloat($('#c-v').value),f=$('#c-f').value,t=$('#c-t').value,n=$('#c-n').value.trim(),r=$('#c-r');
+ if(!(v>=0)){r.textContent='Enter an amount';return}
+ const o=conv(v,f,t,n);
+ if(o===null){r.innerHTML=n?'No density for “'+esc(n)+'” yet. Add one below.':'Weight ↔ volume needs an ingredient with a density.';if(n)$('#d-n').value=n;return}
+ const d=U[f][0]!==U[t][0]?densFor(n):null;
+ r.innerHTML=fmt(v)+' '+ul(f)+' = '+fmt(o)+' '+ul(t)+(d?'<div class="meta" style="font-weight:400">'+esc(d.k)+' at '+fmt(d.d)+' g/ml ('+(d.own?'yours':'typical')+')</div>':'')}
+function densList(){const k=Object.keys(S.dens);
+ $('#d-list').innerHTML=k.map(n=>`<div class="row"><div class="grow"><div class="name">${esc(n)}</div><div class="meta">${fmt(S.dens[n])} g/ml · ${fmt(S.dens[n]*236.588)} g per cup</div></div><button data-a="deldens" data-id="${esc(n)}">Delete</button></div>`).join('')+'<div class="meta" style="margin-bottom:8px">Typical values are built in for '+Object.keys(TYP).join(', ')+'. Your own entries override them.</div>'}
+function settingsSheet(){sheet(`<h3>Settings</h3><label for="s-win">Expiring-soon window (days)</label><div class="bc"><input id="s-win" type="number" inputmode="numeric" min="0" max="365" value="${S.win}"><button class="pri" data-a="savewin">Save</button></div>
+<h3 style="margin-top:14px">Backup</h3><div class="meta" style="margin-bottom:8px">Your data lives in this browser and can be cleared. Export a backup now and then.</div>
+<button class="pri big" data-a="export">Export backup file</button><button class="big" data-a="copybk">Copy backup as text</button>
+<label for="bk-file" style="margin-top:8px">Import: choose a backup file or paste its text</label><input id="bk-file" type="file" accept=".json,application/json"><textarea id="bk" rows="4" placeholder="Paste backup text here"></textarea>
+<div class="two"><button class="big" data-a="imp" data-id="replace">Replace my data</button><button class="big" data-a="imp" data-id="merge">Merge with mine</button></div><button class="big" data-a="close">Done</button>`);
+ $('#bk-file').onchange=async e=>{const f=e.target.files[0];if(f){try{$('#bk').value=await f.text()}catch(x){toast('Couldn’t read that file.')}}}}
+const bkJson=()=>JSON.stringify({app:'pantry',v:2,exported:new Date().toISOString(),data:S},null,1);
+async function doExport(){let d=null;try{d=await claude.use('downloads')}catch(e){}
+ if(!d){return fallbackExport()}
+ try{await d.save({filename:'pantry-backup-'+new Date().toISOString().slice(0,10)+'.json',data:bkJson()});toast('Backup saved')}catch(e){if(!e||e.code!=='declined')fallbackExport()}}
+async function fallbackExport(){const json=bkJson(),name='pantry-backup-'+new Date().toISOString().slice(0,10)+'.json';$('#bk').value=json;
+ try{const f=new File([json],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Pantry backup'});toast('Backup shared');return}}catch(e){if(e&&e.name==='AbortError')return}
+ let box=$('#dlbox');if(!box){box=document.createElement('div');box.id='dlbox';box.style.marginBottom='10px';$('#bk').before(box)}
+ const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+ box.innerHTML=`<a href="${url}" download="${name}" style="color:var(--acc);font-weight:600">Tap to download ${name}</a>`;
+ toast('Tap the download link, or copy the text below.')}
+async function doCopy(){$('#bk').value=bkJson();try{await navigator.clipboard.writeText($('#bk').value);toast('Backup copied')}catch(e){$('#bk').select();toast('Select all and copy the text below.')}}
+function doImport(mode){let o;try{o=JSON.parse($('#bk').value)}catch(e){toast('That isn’t valid backup text.');return}
+ const d=o&&o.data?o.data:o;if(!d||!Array.isArray(d.items)){toast('No pantry data found in that backup.');return}
+ const A=x=>Array.isArray(x)?x:[],c={items:A(d.items),recipes:A(d.recipes),shop:A(d.shop),codes:d.codes&&typeof d.codes==='object'?d.codes:{},win:d.win,dens:d.dens&&typeof d.dens==='object'?d.dens:{}};
+ if(mode==='replace')S=Object.assign({items:[],recipes:[],shop:[],codes:{},win:7},c);
+ else{const m=(a,b)=>{const ids=new Set(a.map(x=>x.id));return a.concat(b.filter(x=>!ids.has(x.id)))};S.items=m(S.items,c.items);S.recipes=m(S.recipes,c.recipes);S.shop=m(S.shop,c.shop);Object.assign(S.codes,c.codes);Object.assign(S.dens,c.dens)}
+ migrate();save();closeSheet();render();toast('Imported '+c.items.length+' items and '+c.recipes.length+' recipes')}
+async function scan(){
+ if(!('BarcodeDetector' in window)){toast('This browser can’t scan barcodes. Type the number instead.');return}
+ let stream;
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){toast('Camera is blocked. Allow access or type the barcode.');return}
+ const ov=$('#scan'),v=$('#vid');ov.hidden=false;v.srcObject=stream;try{await v.play()}catch(e){}
+ const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});let on=true;
+ const stop=()=>{on=false;stream.getTracks().forEach(t=>t.stop());ov.hidden=true};
+ $('#scanx').onclick=stop;
+ (async()=>{while(on){try{const r=await det.detect(v);if(r.length){const c=r[0].rawValue;stop();$('#f-bc').value=c;
+  if(S.codes[c]){$('#f-name').value=S.codes[c];$('#f-exp').focus()}else{$('#f-name').focus();toast('New barcode. Name it once and it’s remembered.')}return}}catch(e){}
+  await new Promise(r=>setTimeout(r,250))}})();
+}
+document.addEventListener('click',e=>{
+ if(e.target.id==='sheetbg'){closeSheet();return}
+ const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
+ const item=S.items.find(i=>i.id===id);
+ if(a==='tab'){tab=id;render();scrollTo(0,0)}
+ else if(a==='additem')itemSheet();
+ else if(a==='scan')scan();
+ else if(a==='close')closeSheet();
+ else if(a==='saveitem'){const name=$('#f-name').value.trim(),bc=$('#f-bc').value.trim();
+  if(!name){toast('Give the item a name.');return}
+  if(bc)S.codes[bc]=name;
+  const pq=parseFloat($('#f-qty').value),rec={name,qty:pq>=0?pq:1,unit:$('#f-unit').value.trim(),size:Math.max(0,parseFloat($('#f-size').value)||0),su:$('#f-su').value,exp:$('#f-exp').value,bc};
+  if(editId)Object.assign(S.items.find(i=>i.id===editId),rec);else S.items.push(Object.assign({id:uid()},rec));
+  if(fromShop)S.shop=S.shop.filter(s=>s.id!==fromShop);
+  save();closeSheet();render();toast((editId?'Updated ':'Saved ')+name)}
+ else if(a==='inc'){item.qty=Math.round((item.qty+1)*100)/100;save();render()}
+ else if(a==='dec'){if(item.qty>1)item.qty=Math.round((item.qty-1)*100)/100;else{S.items=S.items.filter(i=>i.id!==id);if(!inShop(item.name))S.shop.push({id:uid(),name:item.name,done:false});toast(item.name+' is out. Added to your list.')}save();render()}
+ else if(a==='edit')itemSheet('',item);
+ else if(a==='usesome'){const v=parseFloat($('#u-amt').value);if(!(v>0)){toast('Enter the amount you used.');return}
+  const u=conv(v,$('#u-un').value,item.su,item.name);if(u===null){toast('Needs a density to convert. Open Convert to add one for '+item.name+'.');return}
+  const left=item.qty*item.size-u;
+  if(left<=0.0001){S.items=S.items.filter(i=>i.id!==id);if(!inShop(item.name))S.shop.push({id:uid(),name:item.name,done:false});toast(item.name+' is used up. Added to your list.')}
+  else{item.qty=Math.round(left/item.size*1000)/1000;toast(fmt(left)+' '+ul(item.su)+' left')}
+  save();closeSheet();render()}
+ else if(a==='convert')convSheet();
+ else if(a==='savedens'){const n=norm($('#d-n').value),v=parseFloat($('#d-v').value);if(!n||!(v>0)){toast('Add an ingredient and a density.');return}S.dens[n]=$('#d-u').value==='gcup'?v/236.588:v;save();densList();convUpdate();$('#d-v').value='';toast('Saved density for '+n)}
+ else if(a==='deldens'){delete S.dens[id];save();densList();convUpdate()}
+ else if(a==='delitem'){S.items=S.items.filter(i=>i.id!==id);save();closeSheet();render()}
+ else if(a==='lookup'){const c=$('#f-bc').value.trim();if(!c){toast('Scan or type a barcode first.');return}if(!window.open('https://www.upcitemdb.com/upc/'+encodeURIComponent(c),'_blank','noopener'))toast('Your browser blocked the new tab.')}
+ else if(a==='settings')settingsSheet();
+ else if(a==='savewin'){const n=parseInt($('#s-win').value,10);if(!(n>=0&&n<=365)){toast('Enter 0 to 365 days.');return}S.win=n;save();render();toast('Window set to '+n+' days')}
+ else if(a==='export')doExport();
+ else if(a==='copybk')doCopy();
+ else if(a==='imp')doImport(id);
+ else if(a==='need'){S.items=S.items.filter(i=>i.id!==id);if(!inShop(item.name))S.shop.push({id:uid(),name:item.name,done:false});save();closeSheet();render();toast('Added '+item.name+' to your list')}
+ else if(a==='addrec')sheet(`<h3>Add recipe</h3><label for="r-name">Name</label><input id="r-name" placeholder="e.g. Veggie omelette"><label for="r-ing">Ingredients (one per line)</label><textarea id="r-ing" rows="6" placeholder="eggs&#10;spinach&#10;cheddar"></textarea><label for="r-notes">Notes</label><textarea id="r-notes" rows="3" placeholder="Steps or a link"></textarea><button class="pri big" data-a="saverec">Save recipe</button><button class="big" data-a="close">Cancel</button>`);
+ else if(a==='saverec'){const name=$('#r-name').value.trim(),ing=$('#r-ing').value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+  if(!name||!ing.length){toast('Add a name and at least one ingredient.');return}
+  S.recipes.push({id:uid(),name,ing,notes:$('#r-notes').value.trim()});save();closeSheet();render()}
+ else if(a==='delrec'){S.recipes=S.recipes.filter(r=>r.id!==id);save();render()}
+ else if(a==='addmiss'){const r=S.recipes.find(r=>r.id===id);let n=0;
+  r.ing.filter(g=>!have(g)&&!inShop(g)).forEach(g=>{S.shop.push({id:uid(),name:g,done:false});n++});save();render();toast(n?'Added '+n+' to your list':'Already on your list')}
+ else if(a==='addshop'){const v=$('#shopin').value.trim();if(v&&!inShop(v)){S.shop.push({id:uid(),name:v,done:false});save();render();$('#shopin').focus()}}
+ else if(a==='tog'){const s=S.shop.find(s=>s.id===id);s.done=b.checked;save();render()}
+ else if(a==='clear'){S.shop=S.shop.filter(s=>!s.done);save();render()}
+ else if(a==='stock'){const s=S.shop.find(s=>s.id===id);itemSheet(s.name);fromShop=id}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='shopin')document.querySelector('[data-a="addshop"]').click()});
+render();
+</script>
+</body>
+</html>
