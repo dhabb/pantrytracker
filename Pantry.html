@@ -60,6 +60,7 @@ nav i{font-style:normal;font-size:11px;background:var(--bad);color:#fff;border-r
 .done .name{text-decoration:line-through;color:var(--mut)}
 .step{display:flex;align-items:center;gap:6px}.step button{width:34px;height:34px;padding:0;font-size:18px}.step b{min-width:24px;text-align:center}
 .gear{position:absolute;right:14px;top:22px}
+.tag.unsure{border:2px dashed #8b6fe0;color:#8b6fe0;background:transparent;font-weight:600;padding:2px 8px;font-size:13px;border-radius:99px}
 select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:10px;font:inherit;color:inherit}
 header{position:relative}
 </style>
@@ -73,7 +74,7 @@ header{position:relative}
 <div id="toast" hidden></div>
 <script>
 const $=s=>document.querySelector(s);
-let S={items:[],recipes:[],shop:[],codes:{},win:7,dens:{}},tab='soon',fromShop=null,editId=null;
+let S={items:[],recipes:[],shop:[],codes:{},win:7,dens:{}},tab='soon',fromShop=null,editId=null,recId=null;
 try{const r=localStorage.getItem('pantry-v1');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 function migrate(){S.items.forEach(i=>{if(typeof i.qty!=='number'){const t=String(i.qty||'').trim(),m=t.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);i.qty=m?+m[1]:1;i.unit=m?m[2]:t}i.unit=i.unit||''});if(!(S.win>=0))S.win=7;if(!S.dens||typeof S.dens!=='object')S.dens={}}
 migrate();
@@ -83,19 +84,21 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const norm=s=>String(s).trim().toLowerCase();
 const days=d=>d?Math.round((new Date(d+'T00:00:00')-new Date(new Date().toDateString()))/864e5):null;
 const match=(a,b)=>{a=norm(a);b=norm(b);return a&&b&&(a.includes(b)||b.includes(a))};
-const have=g=>S.items.some(i=>match(i.name,g));
+const have=(g,r)=>mstat(g,r).lv===2;
 const inShop=n=>S.shop.some(s=>norm(s.name)===norm(n));
 const soonItems=()=>S.items.filter(i=>{const d=days(i.exp);return d!==null&&d<=S.win}).sort((a,b)=>days(a.exp)-days(b.exp));
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
 function suggest(){const soon=soonItems();
- return S.recipes.map(r=>({r,use:r.ing.filter(g=>soon.some(i=>match(i.name,g))),miss:r.ing.filter(g=>!have(g))}))
+ return S.recipes.map(r=>({r,use:r.ing.filter(g=>mstat(g,r).lv===2&&soon.some(i=>mlevel(g,i.name)===2)),miss:r.ing.filter(g=>mstat(g,r).lv===0),uns:r.ing.filter(g=>mstat(g,r).lv===1).length}))
  .filter(x=>x.use.length).sort((a,b)=>b.use.length-a.use.length||a.miss.length-b.miss.length)}
 function when(d){const n=days(d);if(n<0)return n===-1?'Expired yesterday':'Expired '+(-n)+' days ago';if(n===0)return'Expires today';if(n===1)return'Expires tomorrow';return'Expires in '+n+' days'}
 function chip(i){const d=days(i.exp);if(d===null)return'<div class="chip none">–<small>no date</small></div>';
  const c=d<=2?'bad':d<=5?'warn':'ok';return `<div class="chip ${c}">${d<0?'!':d}<small>${d<0?'expired':d===1?'day':'days'}</small></div>`}
 function itemRow(i){return `<div class="row">${chip(i)}<div class="grow"><button class="name" data-a="edit" data-id="${i.id}" style="border:0;padding:0;text-align:left;font-size:16px;background:none">${esc(i.name)}</button><div class="meta">${i.exp?when(i.exp):'No expiry date'}${sizeTxt(i)}</div></div>
 <div class="step"><button data-a="dec" data-id="${i.id}" aria-label="One less">−</button><b>${i.qty}</b><button data-a="inc" data-id="${i.id}" aria-label="One more">+</button></div></div>`}
-function recipeTags(r){const soon=soonItems();return r.ing.map(g=>{const u=soon.some(i=>match(i.name,g));return `<span class="tag ${u?'use':have(g)?'have':''}">${esc(g)}</span>`}).join('')}
+function recipeTags(r){const soon=soonItems();return r.ing.map(g=>{const st=mstat(g,r);
+ if(st.lv===1)return `<button class="tag unsure" data-a="confirm" data-id="${r.id}" data-g="${esc(g)}">${esc(g)} ?</button>`;
+ const u=st.lv===2&&soon.some(i=>mlevel(g,i.name)===2);return `<span class="tag ${u?'use':st.lv===2?'have':''}">${esc(g)}</span>`}).join('')}
 function render(){
  const soon=soonItems(),miss=S.shop.filter(s=>!s.done).length;
  const titles={soon:['Use first','Expiring within '+S.win+' days'],pantry:['Pantry',S.items.length+' items'],recipes:['Recipes',S.recipes.length+' saved'],list:['Shopping list',miss+' to buy']};
@@ -105,7 +108,7 @@ function render(){
   h+=`<button class="pri big" data-a="additem">Add item</button>`;
   h+=soon.length?soon.map(itemRow).join(''):`<div class="empty">Nothing is close to expiring. Items dated within the next ${S.win} days show up here.</div>`;
   const sg=suggest();h+='<h2>Cook with them</h2>';
-  h+=sg.length?sg.map(x=>`<div class="card"><h3>${esc(x.r.name)}</h3><div class="meta">Uses ${x.use.length} expiring · missing ${x.miss.length}</div><div class="tags">${recipeTags(x.r)}</div>${x.miss.length?`<button data-a="addmiss" data-id="${x.r.id}">Add missing to list</button>`:''}</div>`).join(''):`<div class="empty">${S.recipes.length?'No saved recipe uses your expiring items.':'Save a few recipes and matches will show up here.'}</div>`;
+  h+=sg.length?sg.map(x=>`<div class="card"><h3>${esc(x.r.name)}</h3><div class="meta">Uses ${x.use.length} expiring · missing ${x.miss.length}${x.uns?' · '+x.uns+' to confirm':''}</div><div class="tags">${recipeTags(x.r)}</div>${x.miss.length?`<button data-a="addmiss" data-id="${x.r.id}">Add missing to list</button>`:''}</div>`).join(''):`<div class="empty">${S.recipes.length?'No saved recipe uses your expiring items.':'Save a few recipes and matches will show up here.'}</div>`;
  }
  if(tab==='pantry'){
   h+=`<button class="pri big" data-a="additem">Add item</button>`;
@@ -114,7 +117,7 @@ function render(){
  }
  if(tab==='recipes'){
   h+=`<button class="pri big" data-a="addrec">Add recipe</button>`;
-  h+=S.recipes.length?S.recipes.map(r=>{const m=r.ing.filter(g=>!have(g)).length;return `<div class="card"><h3>${esc(r.name)}</h3><div class="tags">${recipeTags(r)}</div>${r.notes?`<div class="meta" style="margin-bottom:10px;white-space:pre-wrap">${esc(r.notes)}</div>`:''}<div style="display:flex;gap:8px">${m?`<button data-a="addmiss" data-id="${r.id}">Add ${m} missing to list</button>`:'<span class="meta">You have everything</span>'}<button data-a="delrec" data-id="${r.id}">Delete</button></div></div>`}).join(''):`<div class="empty">No recipes yet. Add one with its ingredients and it will be matched against your pantry.</div>`;
+  h+=S.recipes.length?S.recipes.map(r=>{const m=r.ing.filter(g=>mstat(g,r).lv===0).length,u=r.ing.filter(g=>mstat(g,r).lv===1).length;return `<div class="card"><h3>${esc(r.name)}</h3><div class="tags">${recipeTags(r)}</div>${r.notes?`<div class="meta" style="margin-bottom:10px;white-space:pre-wrap">${esc(r.notes)}</div>`:''}<div style="display:flex;gap:8px">${m?`<button data-a="addmiss" data-id="${r.id}">Add ${m} missing to list</button>`:`<span class="meta">${u?'Nothing certain is missing':'You have everything'}</span>`}<button data-a="editrec" data-id="${r.id}">Edit</button><button data-a="delrec" data-id="${r.id}">Delete</button></div>${u?'<div class="meta" style="margin-top:8px">Dashed tags are possible matches. Tap one to confirm.</div>':''}</div>`}).join(''):`<div class="empty">No recipes yet. Add one with its ingredients and it will be matched against your pantry.</div>`;
  }
  if(tab==='list'){
   h+=`<div class="bc"><input id="shopin" placeholder="Add an item" aria-label="Add an item"><button class="pri" data-a="addshop" style="height:44px">Add</button></div>`;
@@ -131,6 +134,17 @@ function itemSheet(name,it){it=it||{};editId=it.id||null;sheet(`<h3>${it.id?'Edi
 <div class="two"><div><label for="f-qty">Containers</label><input id="f-qty" type="number" inputmode="decimal" min="0" step="any" value="${it.qty??1}"></div><div><label for="f-unit">Container name</label><input id="f-unit" value="${esc(it.unit||'')}" placeholder="e.g. can, bag"></div></div><div class="two"><div><label for="f-size">Amount per container</label><input id="f-size" type="number" inputmode="decimal" min="0" step="any" value="${it.size||''}" placeholder="e.g. 400"></div><div><label for="f-su">Measured in</label><select id="f-su">${uopts(it.su||'g')}</select></div></div><label for="f-exp">Expiration date</label><input id="f-exp" type="date" value="${esc(it.exp||'')}">
 ${it.id&&it.size?'<label for="u-amt">Use some</label><div class="bc"><input id="u-amt" type="number" inputmode="decimal" min="0" step="any" placeholder="Amount used"><select id="u-un" style="width:90px;margin-bottom:10px">'+uopts(it.su||'g')+'</select><button data-a="usesome" data-id="'+it.id+'" style="height:44px">Use</button></div>':''}<button class="pri big" data-a="saveitem">Save item</button>${it.id?'<button class="big" data-a="need" data-id="'+it.id+'">Out of this: move to list</button><button class="big" data-a="delitem" data-id="'+it.id+'">Delete item</button>':''}<button class="big" data-a="close">Cancel</button>`);
  $('#f-bc').oninput=e=>{const c=e.target.value.trim();if(S.codes[c]&&!$('#f-name').value)$('#f-name').value=S.codes[c]}}
+const UNITW=new Set(['g','kg','oz','lb','lbs','ml','l','tsp','tbsp','cup','cups','fl','floz','pinch','dash','can','cans','clove','cloves','gram','grams','ounce','ounces','pound','pounds','liter','liters','large','small','medium','of','a','the','chopped','diced','sliced','minced','fresh']);
+function sing(w){if(w.length>4&&w.endsWith('ies'))return w.slice(0,-3)+'y';if(w.length>4&&w.endsWith('oes'))return w.slice(0,-2);if(w.length>3&&w.endsWith('s')&&!w.endsWith('ss'))return w.slice(0,-1);return w}
+function words(t){return norm(t).replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(w=>w&&!/^\d/.test(w)&&!UNITW.has(w)).map(sing)}
+function lcs(a,b){let best=0,prev=new Array(b.length+1).fill(0);for(let i=1;i<=a.length;i++){const cur=new Array(b.length+1).fill(0);for(let j=1;j<=b.length;j++){if(a[i-1]===b[j-1]){cur[j]=prev[j-1]+1;if(cur[j]>best)best=cur[j]}}prev=cur}return best}
+function mlevel(ing,name){const A=words(ing).join(' '),B=words(name).join(' ');if(!A||!B)return 0;
+ const has=(x,y)=>(' '+x+' ').includes(' '+y+' ');if(has(A,B)||has(B,A))return 2;
+ const L=lcs(A,B);return L>=3&&L/Math.min(A.length,B.length)>=.6?1:0}
+function mstat(g,r){const o=r&&r.ok&&r.ok[norm(g)];if(o===true)return{lv:2,item:null};if(o===false)return{lv:0,item:null};
+ let lv=0,item=null;for(const i of S.items){const l=mlevel(g,i.name);if(l>lv){lv=l;item=i}if(lv===2)break}return{lv,item}}
+function recSheet(r){r=r||{};recId=r.id||null;sheet(`<h3>${r.id?'Edit recipe':'Add recipe'}</h3><label for="r-name">Name</label><input id="r-name" value="${esc(r.name||'')}" placeholder="e.g. Veggie omelette"><label for="r-ing">Ingredients (one per line)</label><textarea id="r-ing" rows="6" placeholder="eggs&#10;spinach&#10;cheddar">${esc((r.ing||[]).join('\n'))}</textarea><label for="r-notes">Notes</label><textarea id="r-notes" rows="3" placeholder="Steps or a link">${esc(r.notes||'')}</textarea><button class="pri big" data-a="saverec">Save recipe</button><button class="big" data-a="close">Cancel</button>`)}
+function confSheet(rid,g){const st=mstat(g,S.recipes.find(x=>x.id===rid));sheet(`<h3>Same thing?</h3><p>The recipe says <b>${esc(g)}</b>. Your pantry has <b>${esc(st.item?st.item.name:'something similar')}</b>. Would you use that for this recipe?</p><button class="pri big" data-a="cset" data-id="${rid}" data-g="${esc(g)}" data-v="1">Yes, I have it</button><button class="big" data-a="cset" data-id="${rid}" data-g="${esc(g)}" data-v="0">No, I don’t</button><button class="big" data-a="close">Decide later</button>`)}
 const U={g:['m',1],kg:['m',1000],oz:['m',28.3495],lb:['m',453.592],ml:['v',1],l:['v',1000],tsp:['v',4.92892],tbsp:['v',14.7868],floz:['v',29.5735],cup:['v',236.588]};
 const ul=u=>u==='floz'?'fl oz':u;
 const uopts=sel=>Object.keys(U).map(k=>`<option value="${k}"${k===sel?' selected':''}>${ul(k)}</option>`).join('');
@@ -224,13 +238,18 @@ document.addEventListener('click',e=>{
  else if(a==='copybk')doCopy();
  else if(a==='imp')doImport(id);
  else if(a==='need'){S.items=S.items.filter(i=>i.id!==id);if(!inShop(item.name))S.shop.push({id:uid(),name:item.name,done:false});save();closeSheet();render();toast('Added '+item.name+' to your list')}
- else if(a==='addrec')sheet(`<h3>Add recipe</h3><label for="r-name">Name</label><input id="r-name" placeholder="e.g. Veggie omelette"><label for="r-ing">Ingredients (one per line)</label><textarea id="r-ing" rows="6" placeholder="eggs&#10;spinach&#10;cheddar"></textarea><label for="r-notes">Notes</label><textarea id="r-notes" rows="3" placeholder="Steps or a link"></textarea><button class="pri big" data-a="saverec">Save recipe</button><button class="big" data-a="close">Cancel</button>`);
+ else if(a==='addrec')recSheet();
+ else if(a==='editrec')recSheet(S.recipes.find(r=>r.id===id));
+ else if(a==='confirm')confSheet(id,b.dataset.g);
+ else if(a==='cset'){const r=S.recipes.find(x=>x.id===id);r.ok=r.ok||{};r.ok[norm(b.dataset.g)]=b.dataset.v==='1';save();closeSheet();render()}
  else if(a==='saverec'){const name=$('#r-name').value.trim(),ing=$('#r-ing').value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
   if(!name||!ing.length){toast('Add a name and at least one ingredient.');return}
-  S.recipes.push({id:uid(),name,ing,notes:$('#r-notes').value.trim()});save();closeSheet();render()}
+  const notes=$('#r-notes').value.trim();
+  if(recId){const r=S.recipes.find(x=>x.id===recId);r.name=name;r.ing=ing;r.notes=notes;if(r.ok){const ks=new Set(ing.map(norm));Object.keys(r.ok).forEach(k=>{if(!ks.has(k))delete r.ok[k]})}}else S.recipes.push({id:uid(),name,ing,notes});
+  save();closeSheet();render()}
  else if(a==='delrec'){S.recipes=S.recipes.filter(r=>r.id!==id);save();render()}
  else if(a==='addmiss'){const r=S.recipes.find(r=>r.id===id);let n=0;
-  r.ing.filter(g=>!have(g)&&!inShop(g)).forEach(g=>{S.shop.push({id:uid(),name:g,done:false});n++});save();render();toast(n?'Added '+n+' to your list':'Already on your list')}
+  r.ing.filter(g=>mstat(g,r).lv===0&&!inShop(g)).forEach(g=>{S.shop.push({id:uid(),name:g,done:false});n++});save();render();toast(n?'Added '+n+' to your list':'Already on your list')}
  else if(a==='addshop'){const v=$('#shopin').value.trim();if(v&&!inShop(v)){S.shop.push({id:uid(),name:v,done:false});save();render();$('#shopin').focus()}}
  else if(a==='tog'){const s=S.shop.find(s=>s.id===id);s.done=b.checked;save();render()}
  else if(a==='clear'){S.shop=S.shop.filter(s=>!s.done);save();render()}
