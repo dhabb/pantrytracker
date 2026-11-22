@@ -89,16 +89,17 @@ const inShop=n=>S.shop.some(s=>norm(s.name)===norm(n));
 const soonItems=()=>S.items.filter(i=>{const d=days(i.exp);return d!==null&&d<=S.win}).sort((a,b)=>days(a.exp)-days(b.exp));
 function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
 function suggest(){const soon=soonItems();
- return S.recipes.map(r=>({r,use:r.ing.filter(g=>mstat(g,r).lv===2&&soon.some(i=>mlevel(g,i.name)===2)),miss:r.ing.filter(g=>mstat(g,r).lv===0),uns:r.ing.filter(g=>mstat(g,r).lv===1).length}))
+ return S.recipes.map(r=>({r,use:r.ing.filter(g=>usesSoon(g,r,soon)),miss:r.ing.filter(g=>mstat(g,r).lv===0),uns:r.ing.filter(g=>mstat(g,r).lv===1).length}))
  .filter(x=>x.use.length).sort((a,b)=>b.use.length-a.use.length||a.miss.length-b.miss.length)}
 function when(d){const n=days(d);if(n<0)return n===-1?'Expired yesterday':'Expired '+(-n)+' days ago';if(n===0)return'Expires today';if(n===1)return'Expires tomorrow';return'Expires in '+n+' days'}
 function chip(i){const d=days(i.exp);if(d===null)return'<div class="chip none">–<small>no date</small></div>';
  const c=d<=2?'bad':d<=5?'warn':'ok';return `<div class="chip ${c}">${d<0?'!':d}<small>${d<0?'expired':d===1?'day':'days'}</small></div>`}
 function itemRow(i){return `<div class="row">${chip(i)}<div class="grow"><button class="name" data-a="edit" data-id="${i.id}" style="border:0;padding:0;text-align:left;font-size:16px;background:none">${esc(i.name)}</button><div class="meta">${i.exp?when(i.exp):'No expiry date'}${sizeTxt(i)}</div></div>
 <div class="step"><button data-a="dec" data-id="${i.id}" aria-label="One less">−</button><b>${i.qty}</b><button data-a="inc" data-id="${i.id}" aria-label="One more">+</button></div></div>`}
-function recipeTags(r){const soon=soonItems();return r.ing.map(g=>{const st=mstat(g,r);
- if(st.lv===1)return `<button class="tag unsure" data-a="confirm" data-id="${r.id}" data-g="${esc(g)}">${esc(g)} ?</button>`;
- const u=st.lv===2&&soon.some(i=>mlevel(g,i.name)===2);return `<span class="tag ${u?'use':st.lv===2?'have':''}">${esc(g)}</span>`}).join('')}
+function usesSoon(g,r,soon,st){st=st||mstat(g,r);if(st.lv!==2)return false;return st.conf&&st.item?soon.includes(st.item):soon.some(i=>mlevel(g,i.name)===2)}
+function recipeTags(r){const soon=soonItems();return r.ing.map(g=>{const st=mstat(g,r),u=usesSoon(g,r,soon,st),a=`data-a="pick" data-id="${r.id}" data-g="${esc(g)}"`;
+ if(st.lv===1)return `<button class="tag unsure" ${a}>${esc(g)} ?</button>`;
+ return `<button class="tag ${u?'use':st.lv===2?'have':''}" ${a}>${esc(g)}${st.conf&&st.lv===2?' ✓':''}</button>`}).join('')}
 function render(){
  const soon=soonItems(),miss=S.shop.filter(s=>!s.done).length;
  const titles={soon:['Use first','Expiring within '+S.win+' days'],pantry:['Pantry',S.items.length+' items'],recipes:['Recipes',S.recipes.length+' saved'],list:['Shopping list',miss+' to buy']};
@@ -117,7 +118,7 @@ function render(){
  }
  if(tab==='recipes'){
   h+=`<button class="pri big" data-a="addrec">Add recipe</button>`;
-  h+=S.recipes.length?S.recipes.map(r=>{const m=r.ing.filter(g=>mstat(g,r).lv===0).length,u=r.ing.filter(g=>mstat(g,r).lv===1).length;return `<div class="card"><h3>${esc(r.name)}</h3><div class="tags">${recipeTags(r)}</div>${r.notes?`<div class="meta" style="margin-bottom:10px;white-space:pre-wrap">${esc(r.notes)}</div>`:''}<div style="display:flex;gap:8px">${m?`<button data-a="addmiss" data-id="${r.id}">Add ${m} missing to list</button>`:`<span class="meta">${u?'Nothing certain is missing':'You have everything'}</span>`}<button data-a="editrec" data-id="${r.id}">Edit</button><button data-a="delrec" data-id="${r.id}">Delete</button></div>${u?'<div class="meta" style="margin-top:8px">Dashed tags are possible matches. Tap one to confirm.</div>':''}</div>`}).join(''):`<div class="empty">No recipes yet. Add one with its ingredients and it will be matched against your pantry.</div>`;
+  h+=S.recipes.length?S.recipes.map(r=>{const m=r.ing.filter(g=>mstat(g,r).lv===0).length,u=r.ing.filter(g=>mstat(g,r).lv===1).length;return `<div class="card"><h3>${esc(r.name)}</h3><div class="tags">${recipeTags(r)}</div>${r.notes?`<div class="meta" style="margin-bottom:10px;white-space:pre-wrap">${esc(r.notes)}</div>`:''}<div style="display:flex;gap:8px">${m?`<button data-a="addmiss" data-id="${r.id}">Add ${m} missing to list</button>`:`<span class="meta">${u?'Nothing certain is missing':'You have everything'}</span>`}<button data-a="editrec" data-id="${r.id}">Edit</button><button data-a="delrec" data-id="${r.id}">Delete</button></div><div class="meta" style="margin-top:8px">Tap an ingredient to choose which pantry item it is. Dashed tags are possible matches.</div></div>`}).join(''):`<div class="empty">No recipes yet. Add one with its ingredients and it will be matched against your pantry.</div>`;
  }
  if(tab==='list'){
   h+=`<div class="bc"><input id="shopin" placeholder="Add an item" aria-label="Add an item"><button class="pri" data-a="addshop" style="height:44px">Add</button></div>`;
@@ -141,9 +142,14 @@ function lcs(a,b){let best=0,prev=new Array(b.length+1).fill(0);for(let i=1;i<=a
 function mlevel(ing,name){const A=words(ing).join(' '),B=words(name).join(' ');if(!A||!B)return 0;
  const has=(x,y)=>(' '+x+' ').includes(' '+y+' ');if(has(A,B)||has(B,A))return 2;
  const L=lcs(A,B);return L>=3&&L/Math.min(A.length,B.length)>=.6?1:0}
-function mstat(g,r){const o=r&&r.ok&&r.ok[norm(g)];if(o===true)return{lv:2,item:null};if(o===false)return{lv:0,item:null};
+function mstat(g,r){const k=norm(g),o=r&&r.ok&&r.ok[k];if(o===true){const pid=r.pick&&r.pick[k],it=pid&&S.items.find(i=>i.id===pid);if(it||!pid)return{lv:2,item:it||null,conf:true}}else if(o===false)return{lv:0,item:null,conf:true};
  let lv=0,item=null;for(const i of S.items){const l=mlevel(g,i.name);if(l>lv){lv=l;item=i}if(lv===2)break}return{lv,item}}
 function recSheet(r){r=r||{};recId=r.id||null;sheet(`<h3>${r.id?'Edit recipe':'Add recipe'}</h3><label for="r-name">Name</label><input id="r-name" value="${esc(r.name||'')}" placeholder="e.g. Veggie omelette"><label for="r-ing">Ingredients (one per line)</label><textarea id="r-ing" rows="6" placeholder="eggs&#10;spinach&#10;cheddar">${esc((r.ing||[]).join('\n'))}</textarea><label for="r-notes">Notes</label><textarea id="r-notes" rows="3" placeholder="Steps or a link">${esc(r.notes||'')}</textarea><button class="pri big" data-a="saverec">Save recipe</button><button class="big" data-a="close">Cancel</button>`)}
+function pickSheet(rid,g){const r=S.recipes.find(x=>x.id===rid),k=norm(g),st=mstat(g,r),cur=st.conf&&st.item?st.item.id:null,gw=words(g).join(' ');
+ const rank=S.items.map(i=>({i,sc:lcs(gw,words(i.name).join(' '))})).sort((a,b)=>b.sc-a.sc||a.i.name.localeCompare(b.i.name));
+ sheet(`<h3>Which pantry item?</h3><div class="meta" style="margin-bottom:10px">Recipe ingredient: <b>${esc(g)}</b>${st.lv===2&&!st.conf&&st.item?'. Matched automatically to '+esc(st.item.name)+'.':''}${st.conf&&st.lv===0?'. You marked it as not in your pantry.':''}</div>
+${rank.length?rank.map(({i,sc},n)=>`<button class="row" style="width:100%;text-align:left;font-size:16px;${i.id===cur?'border-color:var(--acc);':''}" data-a="pickitem" data-id="${rid}" data-g="${esc(g)}" data-v="${i.id}"><span class="grow name">${esc(i.name)}</span><span class="meta">${i.id===cur?'chosen':sc>=3&&n===0?'closest':''}</span></button>`).join(''):'<div class="empty">Your pantry is empty.</div>'}
+<button class="big" data-a="cset" data-id="${rid}" data-g="${esc(g)}">Not in my pantry</button>${r.ok&&k in r.ok?`<button class="big" data-a="cclear" data-id="${rid}" data-g="${esc(g)}">Reset to automatic</button>`:''}<button class="big" data-a="close">Close</button>`)}
 function confSheet(rid,g){const st=mstat(g,S.recipes.find(x=>x.id===rid));sheet(`<h3>Same thing?</h3><p>The recipe says <b>${esc(g)}</b>. Your pantry has <b>${esc(st.item?st.item.name:'something similar')}</b>. Would you use that for this recipe?</p><button class="pri big" data-a="cset" data-id="${rid}" data-g="${esc(g)}" data-v="1">Yes, I have it</button><button class="big" data-a="cset" data-id="${rid}" data-g="${esc(g)}" data-v="0">No, I don’t</button><button class="big" data-a="close">Decide later</button>`)}
 const U={g:['m',1],kg:['m',1000],oz:['m',28.3495],lb:['m',453.592],ml:['v',1],l:['v',1000],tsp:['v',4.92892],tbsp:['v',14.7868],floz:['v',29.5735],cup:['v',236.588]};
 const ul=u=>u==='floz'?'fl oz':u;
@@ -240,12 +246,14 @@ document.addEventListener('click',e=>{
  else if(a==='need'){S.items=S.items.filter(i=>i.id!==id);if(!inShop(item.name))S.shop.push({id:uid(),name:item.name,done:false});save();closeSheet();render();toast('Added '+item.name+' to your list')}
  else if(a==='addrec')recSheet();
  else if(a==='editrec')recSheet(S.recipes.find(r=>r.id===id));
- else if(a==='confirm')confSheet(id,b.dataset.g);
- else if(a==='cset'){const r=S.recipes.find(x=>x.id===id);r.ok=r.ok||{};r.ok[norm(b.dataset.g)]=b.dataset.v==='1';save();closeSheet();render()}
+ else if(a==='pick')pickSheet(id,b.dataset.g);
+ else if(a==='cset'||a==='pickitem'||a==='cclear'){const r=S.recipes.find(x=>x.id===id),k=norm(b.dataset.g);r.ok=r.ok||{};r.pick=r.pick||{};
+  if(a==='cclear'){delete r.ok[k];delete r.pick[k]}else if(a==='cset'){r.ok[k]=false;delete r.pick[k]}else{r.ok[k]=true;r.pick[k]=b.dataset.v}
+  save();closeSheet();render()}
  else if(a==='saverec'){const name=$('#r-name').value.trim(),ing=$('#r-ing').value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
   if(!name||!ing.length){toast('Add a name and at least one ingredient.');return}
   const notes=$('#r-notes').value.trim();
-  if(recId){const r=S.recipes.find(x=>x.id===recId);r.name=name;r.ing=ing;r.notes=notes;if(r.ok){const ks=new Set(ing.map(norm));Object.keys(r.ok).forEach(k=>{if(!ks.has(k))delete r.ok[k]})}}else S.recipes.push({id:uid(),name,ing,notes});
+  if(recId){const r=S.recipes.find(x=>x.id===recId);r.name=name;r.ing=ing;r.notes=notes;if(r.ok){const ks=new Set(ing.map(norm));Object.keys(r.ok).forEach(k=>{if(!ks.has(k)){delete r.ok[k];if(r.pick)delete r.pick[k]}})}}else S.recipes.push({id:uid(),name,ing,notes});
   save();closeSheet();render()}
  else if(a==='delrec'){S.recipes=S.recipes.filter(r=>r.id!==id);save();render()}
  else if(a==='addmiss'){const r=S.recipes.find(r=>r.id===id);let n=0;
